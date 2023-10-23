@@ -19,6 +19,6 @@ Design and implement “Word of Wisdom” tcp server.
 ```
 $ docker build -t wow-server -f Dockerfile.server
 $ docker build -t wow-client -f Dockerfile.client
-$ docker run -d -p 8080:8080 wow-server
-$ docker run wow-client
+$ docker run --network host -d wow-server
+$ docker run --network host wow-client
 ```
