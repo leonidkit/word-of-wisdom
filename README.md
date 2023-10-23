@@ -6,13 +6,13 @@ Design and implement “Word of Wisdom” tcp server.
 
 ## Requirements
 * go 1.21 and upper
-* [https://taskfile.dev/installation/]Task manager
+* [Task manager](https://taskfile.dev/installation/)
 * Docker
 
 ## Why hashcash?
 * Easy to understand.
 * Uses efficient algorithms of the SHA family.
-* Has [http://hashcash.org/]documentation.
+* Has [documentation](http://hashcash.org/).
 
 ## How to start?
 
