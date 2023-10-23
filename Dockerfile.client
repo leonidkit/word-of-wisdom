@@ -1,0 +1,19 @@
+FROM golang:1.21 as builder
+
+WORKDIR /go/word-of-wisdom
+
+RUN go install github.com/go-task/task/v3/cmd/task@latest
+
+COPY go.mod .
+COPY go.sum .
+RUN GO111MODULE=on GOPROXY=https://proxy.golang.org go mod download
+
+COPY . .
+
+RUN task docker:client -v
+
+FROM scratch
+
+COPY --from=builder /go/word-of-wisdom/word-of-wisdom .
+
+ENTRYPOINT ["/word-of-wisdom"]

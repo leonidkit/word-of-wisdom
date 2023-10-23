@@ -1,0 +1,123 @@
+version: "3"
+
+silent: true
+
+vars:
+  GO_MODULE: github.com/leonidkit/word-of-wisdom
+  GO_FILES:
+    sh: find . -type f -name '*.go' -not -path "./vendor/*" -not -path "*.gen.go" | tr "\n" " "
+
+  GOLANGCI_LINT_VERSION: v1.55.0
+  GOLANGCI_LINT_CACHE: 
+    sh: echo '{{if eq OS "darwin"}}$HOME/Library/Caches{{else}}$HOME/.cache{{end}}'
+
+  DEV_TOOLS: |
+    github.com/daixiang0/gci@v0.11.2
+    github.com/deepmap/oapi-codegen/cmd/oapi-codegen@master
+    github.com/golang/mock/mockgen@v1.6.0
+    github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
+
+  DEV_TOOLS_DOCKER: |
+      mvdan.cc/gofumpt@v0.4.0
+      github.com/daixiang0/gci@v0.10.1
+      github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
+
+  MESSAGES_SRC: ./api/v1.messages.yaml
+  MESSAGES_DST: ./internal/messages/messages.gen.go
+  MESSAGES_PKG: messages
+
+tasks:
+
+  default:
+    cmds:
+      - task: tidy
+      - task: fmt
+      - task: lint
+
+  docker:server:
+    cmds:
+      - task: docker
+      - task: build
+        vars: {CMD_TYPE: "server"}
+
+  docker:client:
+    cmds:
+      - task: docker
+      - task: build
+        vars: {CMD_TYPE: "client"}
+
+  docker:
+    cmds:
+      - task: dev-tools:install:docker
+      - task: tidy
+      - task: lint:docker
+      - task: tests 
+
+  tidy:
+    cmds:
+      - echo "- Tidy"
+      - go mod tidy
+  
+  fmt:
+    cmds:
+      - echo "- Format"
+      - gofumpt -w {{.GO_FILES}}
+      - gci write -s Standard -s Default -s "Prefix({{.GO_MODULE}})" {{.GO_FILES}}
+
+  lint:docker:
+    cmds:
+      - echo "- Lint offline"
+      - golangci-lint run -v -c ./.golangci.yaml --fix --timeout=5m ./...
+      
+  lint:
+    cmds:
+      - echo "- Lint"
+      - mkdir -p {{.GOLANGCI_LINT_CACHE}}
+      - task: lint:cmd
+        vars: {CLI_ARGS: "run -v --fix --timeout=5m ./..."}
+
+  lint:cmd:
+    cmds:
+      - |
+        docker run --rm \
+          -v "$(pwd):/app" -w /app \
+          -v "{{.GOLANGCI_LINT_CACHE}}:/root/.cache" \
+          -e "GOFLAGS=\"-buildvcs=false\"" \
+          golangci/golangci-lint:{{.GOLANGCI_LINT_VERSION}} \
+          golangci-lint {{.CLI_ARGS}}
+
+  tests:
+    cmds:
+      - echo "- Tests"
+      - go test -v -race ./...
+
+  build:
+    cmds:
+      - echo "- Build client"
+      - CGO_ENABLED=0 go build --trimpath --ldflags="-s" -o word-of-wisdom ./cmd/{{.CMD_TYPE}}
+
+  gen:api:
+    cmds:
+      - echo "Generate server..."
+      - oapi-codegen -o {{.MESSAGES_DST}} -package {{.MESSAGES_PKG}} -old-config-style -generate skip-prune,types {{.MESSAGES_SRC}}
+      - task: tidy
+
+  dev-tools:install:local:
+    cmds:
+      - echo "- Install dev tools" local
+      - task: dev-tools:install
+        vars: {DEV_TOOLS: "{{.DEV_TOOLS}}"}
+
+  dev-tools:install:docker:
+    cmds:
+      - echo "- Install dev tools" local
+      - task: dev-tools:install
+        vars: {DEV_TOOLS: "{{.DEV_TOOLS_DOCKER}}"}
+
+  dev-tools:install:
+    cmds:
+      - echo "- Install dev tools" # range для обхода ограничения go install на модули - https://github.com/golang/go/issues/51196
+      - |
+        {{range $tool := .DEV_TOOLS | trim | splitLines }}
+          go install {{$tool}}
+        {{end}}

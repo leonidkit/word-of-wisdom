@@ -1,0 +1,50 @@
+openapi: 3.1.0
+info:
+  title: Word of Wisdom client and server messages
+  version: v1
+
+servers:
+  - url: tcp://localhost:8080
+    description: Development server
+
+components:
+  schemas:
+
+    Message:
+      oneOf:
+        - $ref: "#/components/schemas/ChallengeRequestMessage"
+        - $ref: "#/components/schemas/ChallengeResponseMessage"
+        - $ref: "#/components/schemas/WordOfWisdomRequestMessage"
+        - $ref: "#/components/schemas/WordOfWisdomResponseMessage"
+      discriminator:
+        propertyName: messageType
+      properties:
+        messageType:
+          type: string
+      required: [messageType]
+
+    ChallengeRequestMessage:
+      type: object
+      required: [challenge]
+      properties:
+        challenge:
+          type: string
+          description: "String based on which the challenge must be solved."
+
+    ChallengeResponseMessage:
+      type: object
+      required: [solution]
+      properties:
+        solution:
+          type: string
+          description: "The solution found in response to a server challenge request."
+
+    WordOfWisdomRequestMessage:
+      type: object
+
+    WordOfWisdomResponseMessage:
+      type: object
+      required: [quote]
+      properties:
+        quote:
+          type: string
