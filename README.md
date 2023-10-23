@@ -22,3 +22,9 @@ $ docker build -t wow-client -f Dockerfile.client
 $ docker run --network host -d wow-server
 $ docker run --network host wow-client
 ```
+
+## Want to do
+* Review project structure.
+* Review config approach.
+* Review handlers approach.
+* Server, handlers tests.
